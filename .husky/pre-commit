@@ -1,0 +1,72 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+npm run lint
+npm run test
+
+  DEV_PORT=3000
+  JSON_SERVER_PORT=3001
+# Stop background processes
+echo "Freeing ports before starting: Dev:3000 ..."
+  
+  while lsof -ti :$DEV_PORT > /dev/null; do
+    PID=$(lsof -ti :$DEV_PORT)
+    echo "Port $DEV_PORT is in use by process $PID. Killing it..."
+    kill -9 $PID
+    sleep 1  # Wait a moment before checking again
+  done
+  echo "Dev port 3000 is now free!"
+  
+echo "Freeing ports before starting: JSON-SERVER:$JSON_SERVER_PID ..."
+  
+  while lsof -ti :$JSON_SERVER_PORT > /dev/null; do
+    PID=$(lsof -ti :$JSON_SERVER_PORT)
+    echo "Port $JSON_SERVER_PORT is in use by process $PID. Killing it..."
+    kill -9 $PID
+    sleep 1  # Wait a moment before checking again
+  done
+  echo "JSON-SERVER port 3001 is now free!"
+
+echo "Starting dev server and json-server in background..."
+
+# Start both servers in the background
+npm run dev &  
+DEV_PID=$!  
+
+npm run json-server &  
+JSON_SERVER_PID=$!  
+
+# Wait for servers to be ready (modify this according to your needs)
+echo "Waiting for servers to start..."
+sleep 5  
+
+# Run Playwright tests
+echo "Running Playwright tests..."
+npm run test-e2e
+
+# Capture test exit code
+TEST_EXIT_CODE=$?  
+
+# Stop background processes
+echo "Freeing ports: Dev:3000 ..."
+  
+  while lsof -ti :$DEV_PORT > /dev/null; do
+    PID=$(lsof -ti :$DEV_PORT)
+    echo "Port $DEV_PORT is in use by process $PID. Killing it..."
+    kill -9 $PID
+    sleep 1  # Wait a moment before checking again
+  done
+  echo "Dev port 3000 is now free!"
+  
+echo "Freeing ports: JSON-SERVER:$JSON_SERVER_PID ..."
+  
+  while lsof -ti :$JSON_SERVER_PORT > /dev/null; do
+    PID=$(lsof -ti :$JSON_SERVER_PORT)
+    echo "Port $JSON_SERVER_PORT is in use by process $PID. Killing it..."
+    kill -9 $PID
+    sleep 1  # Wait a moment before checking again
+  done
+  echo "JSON-SERVER port 3001 is now free!"
+
+echo "Finished!"
+exit $TEST_EXIT_CODE

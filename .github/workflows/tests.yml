@@ -1,0 +1,49 @@
+name: Playwright Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Install json server globally
+      run: npm install -g json-server
+    - name: Run lint
+      run: npm run lint
+    - name: Create data.json in the data folder
+      run: |
+        mkdir -p data
+        echo '{"tasks": []}' > data/data.json
+    - name: Run Jest tests
+      run: npm run test
+    - name: Avviare json-server
+      run: npm run json-server &
+    - name: Attendere che json-server sia attivo
+      run: |
+        for i in {1..10}; do
+          curl --fail http://localhost:3001/tasks && exit 0 || sleep 2
+        done
+        exit 1
+    - name: Start the app in the background
+      run: |
+        npm run dev &  # Run your app in the background
+        DEV_PID=$!      # Capture the PID of the background process
+        echo "App started with PID $DEV_PID"
+      continue-on-error: true  # Allow this step to fail if the background process is killed later
+    - name: Run Playwright tests
+      run: npx playwright test
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
